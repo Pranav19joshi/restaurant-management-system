@@ -1,0 +1,1075 @@
+================================================================================
+         RESTAURANT MANAGEMENT SYSTEM — COMPLETE PROJECT DOCUMENTATION
+         Object Oriented Programming with Java  |  Semester 4
+================================================================================
+Total Lines of Code : 1,656  (across 31 files — 30 .java + 1 .bat)
+Language            : Java (Swing GUI)
+Platform            : Windows (run.bat)
+================================================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 1 — PROJECT OVERVIEW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The Restaurant Management System is a desktop application built entirely in Java
+using the Swing GUI toolkit. It is structured around three functional modules:
+
+  1. Menu Management   — Add, remove, and toggle availability of food/drink items.
+  2. Order Management  — Place, track, and cancel customer orders in real time.
+  3. Billing & Payment — Generate bills, apply discounts, and process payments.
+
+The project is designed to demonstrate core Object-Oriented Programming concepts
+taught in Semester 4, including inheritance, abstraction, interfaces,
+polymorphism, encapsulation, exception handling, multithreading, and File I/O.
+
+The application runs as a single compiled Java program. All data is persisted in
+CSV files under the /data folder. No external libraries or databases are used.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 2 — HOW TO RUN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Requirements:
+  - Java 8 or higher installed and available on the system PATH.
+  - Windows OS (for run.bat).
+
+Method 1 — Double-click run.bat from Windows Explorer.
+
+Method 2 — Open CMD or PowerShell in the project folder and type:
+    .\run.bat
+
+What run.bat does step by step:
+  1. Creates the /out directory if it does not exist.
+  2. Compiles every .java file in src/ and all its subdirectories into /out.
+  3. If compilation fails (exit code != 0), shows an error and stops.
+  4. If compilation succeeds, launches the application using:
+         java -cp out Main
+
+Manual compile command (if needed):
+  javac -d out -sourcepath src src\Main.java src\enums\*.java \
+    src\interfaces\*.java src\exception\*.java src\model\*.java \
+    src\repository\*.java src\concurrent\*.java \
+    src\service\*.java src\ui\*.java
+
+Manual run command:
+  java -cp out Main
+
+The /data folder and both CSV files (menu.csv, orders.csv) are created
+automatically the first time the application runs.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 3 — FOLDER STRUCTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Main_project/
+├── run.bat                  ← Build and run script (Windows)
+├── topic.txt                ← This documentation file
+├── data/                    ← CSV files (auto-created at first run)
+│   ├── menu.csv             ← Menu items (food and drinks)
+│   └── orders.csv           ← Order audit log (append-only)
+├── out/                     ← Compiled .class files (auto-generated)
+└── src/
+    ├── Main.java            ← Entry point; launches Swing on the EDT
+    ├── enums/               ← OrderStatus, PaymentMethod, TableStatus
+    ├── interfaces/          ← Manageable, Orderable, Payable, Notifiable
+    ├── exception/           ← OrderException, PaymentException, StockException
+    ├── model/               ← Person, Customer, MenuItem, FoodItem, DrinkItem,
+    │                           Order, Bill
+    ├── repository/          ← MenuRepository, OrderRepository
+    ├── service/             ← OrderService, KitchenService, BillingService
+    ├── concurrent/          ← OrderQueueManager, KitchenWorkerThread,
+    │                           NotificationThread
+    └── ui/                  ← MainFrame, MenuPanel, OrderPanel, BillingPanel
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 4 — ENUMS  (package: enums)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── OrderStatus.java ──────────────────────────────────────────────────────────
+
+Represents the full lifecycle of an order from placement to completion.
+Each constant carries a human-readable displayName string returned by
+getDisplayName() and toString().
+
+  PENDING    — Order placed but not yet acknowledged by the kitchen.
+  RECEIVED   — Kitchen has acknowledged and queued the order.
+  PREPARING  — Kitchen is actively cooking the order.
+  READY      — Food is fully prepared and ready to be served.
+  SERVED     — Order has been delivered to the customer.
+  CANCELLED  — Order was cancelled before being served.
+
+Fields  : String displayName
+Methods : getDisplayName(), toString()
+
+── PaymentMethod.java ────────────────────────────────────────────────────────
+
+Enumerates all accepted payment modes. Each value has a displayName.
+
+  CASH         — Physical cash payment.
+  CREDIT_CARD  — Credit card swipe/tap.
+  DEBIT_CARD   — Debit card swipe/tap.
+  UPI          — Unified Payments Interface (e.g., PhonePe, GPay).
+  WALLET       — Digital wallet (e.g., Paytm).
+
+Fields  : String displayName
+Methods : getDisplayName(), toString()
+
+── TableStatus.java ──────────────────────────────────────────────────────────
+
+Indicates the current physical state of a restaurant table. Defined for
+future extensibility; not actively used in the current UI flow.
+
+  AVAILABLE  — Table is free.
+  OCCUPIED   — Table has seated customers.
+  RESERVED   — Table is booked in advance.
+  CLEANING   — Table is being cleaned after use.
+
+Fields  : String displayName
+Methods : getDisplayName(), toString()
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 5 — INTERFACES  (package: interfaces)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── Manageable<T> ─────────────────────────────────────────────────────────────
+
+Generic interface that enforces a standard CRUD contract on any entity type T.
+Implemented by MenuRepository.
+
+  void add(T item)          — Add a new entity to the collection.
+  void remove(String id)    — Remove an entity by its unique ID.
+  T    findById(String id)  — Retrieve a single entity by ID (returns null if
+                              not found).
+  List<T> getAll()          — Return a copy of all entities.
+
+── Orderable ─────────────────────────────────────────────────────────────────
+
+Implemented by Order.java. Defines the contract that any order object must
+satisfy when passed to service or UI layers.
+
+  String      getOrderId()            — Retrieve the order's unique ID.
+  OrderStatus getStatus()             — Get the current order lifecycle status.
+  void        setStatus(OrderStatus)  — Update the order status.
+  double      getOrderTotal()         — Calculate and return the total (taxed).
+  List<String> getItemNames()         — Return a list of item names in the order.
+
+── Payable ───────────────────────────────────────────────────────────────────
+
+Implemented by Bill.java. Abstracts payment behaviour away from billing logic.
+
+  double  getTotal()     — Return the final amount due (totalAmount − discount).
+  boolean isPaid()       — Check whether this bill has been settled.
+  void    markAsPaid()   — Mark the bill as paid (no return value).
+
+── Notifiable ────────────────────────────────────────────────────────────────
+
+Implemented by NotificationThread. Provides a callback contract for the
+kitchen thread to alert the UI when order states change.
+
+  void onOrderReady(String orderId, int tableNumber)
+      — Called when an order transitions to READY status.
+
+  void onOrderCancelled(String orderId)
+      — Called when an order is cancelled (available for future use).
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 6 — EXCEPTION CLASSES  (package: exception)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── OrderException — Checked (extends Exception) ──────────────────────────────
+
+Thrown by OrderService when an order-related operation fails.
+
+When thrown:
+  - Table number is zero or negative.
+  - Customer name is null or empty.
+  - Item list is null or empty.
+  - Attempting to cancel an order that is already SERVED or READY.
+  - Attempting to mark an order as SERVED when it is not READY.
+  - Order ID not found in the repository.
+
+Extra field : String orderId  (the ID of the problematic order, if applicable)
+
+Constructors:
+  OrderException(String message)
+  OrderException(String message, String orderId)
+  OrderException(String message, Throwable cause)
+
+── PaymentException — Checked (extends Exception) ────────────────────────────
+
+Thrown by BillingService when a billing or payment operation fails.
+
+When thrown:
+  - Order not found when generating a bill.
+  - Bill not found when applying a discount or processing payment.
+  - Bill is already paid.
+  - Discount amount is negative or exceeds the bill total.
+  - Amount paid is less than the total due.
+
+Extra field : double amount  (the invalid monetary amount, if applicable)
+
+Constructors:
+  PaymentException(String message)
+  PaymentException(String message, double amount)
+  PaymentException(String message, Throwable cause)
+
+── StockException — Unchecked (extends RuntimeException) ─────────────────────
+
+Thrown when a menu item is unavailable or out of stock. Because this is a
+RuntimeException it does not require a checked try-catch, but callers may
+choose to handle it.
+
+When thrown:
+  - An item marked as unavailable is attempted to be ordered.
+
+Extra field : String itemName  (the name of the unavailable item)
+
+Constructors:
+  StockException(String message)
+  StockException(String message, String itemName)
+  StockException(String message, Throwable cause)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 7 — MODEL CLASSES  (package: model)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── Person.java — Abstract ────────────────────────────────────────────────────
+
+The root of the people class hierarchy. All identifying fields are private,
+accessible only through getters and setters (encapsulation).
+
+Private fields:
+  String id      — Unique person identifier.
+  String name    — Full name.
+  String phone   — Phone number.
+  String email   — Email address.
+
+Abstract method:
+  String getRole()   — Subclasses must declare their role (e.g., "Customer").
+
+Constructor:
+  Person(String id, String name, String phone, String email)
+
+toString() returns:  name + " [" + getRole() + "]"
+
+── Customer.java — extends Person ────────────────────────────────────────────
+
+Represents a walk-in restaurant customer. Implements getRole() by returning null
+(customers have no staff role).
+
+Extra fields:
+  int    tableNumber  — Which table the customer is seated at.
+  String visitDate    — The date of the visit (stored as formatted string).
+
+Constructor:
+  Customer(String id, String name, String phone, String email,
+           int tableNumber, String visitDate)
+
+── MenuItem.java — Abstract ──────────────────────────────────────────────────
+
+Base class for all items that appear on the restaurant menu. Because different
+item types carry different tax rates, the tax calculation is left abstract so
+each subclass applies its own rate.
+
+Private fields:
+  String  itemId     — Unique menu item identifier (e.g., F001, D001).
+  String  name       — Display name of the item.
+  String  category   — Grouping (e.g., Main Course, Beverages, Starters).
+  double  basePrice  — Pre-tax price in rupees.
+  boolean available  — Whether the item can currently be ordered.
+
+Abstract methods:
+  double getTaxedPrice()  — Returns basePrice with tax applied.
+  String getItemType()    — Returns "Food" or "Drink".
+
+toString() returns: name + " (type) - Rs. taxedPrice"
+
+── FoodItem.java — extends MenuItem ──────────────────────────────────────────
+
+Represents a food item on the menu. Applies 5% GST.
+
+Constant:
+  TAX_RATE = 0.05
+
+Extra fields:
+  boolean isVegetarian     — True if the item contains no meat/eggs.
+  int     prepTimeMinutes  — Estimated kitchen preparation time in minutes.
+
+getTaxedPrice() = basePrice * 1.05
+getItemType()   = "Food"
+
+Constructor:
+  FoodItem(String itemId, String name, String category, double basePrice,
+           boolean available, boolean isVegetarian, int prepTimeMinutes)
+
+── DrinkItem.java — extends MenuItem ─────────────────────────────────────────
+
+Represents a beverage on the menu. Applies 12% GST.
+
+Constant:
+  TAX_RATE = 0.12
+
+Extra fields:
+  boolean isAlcoholic  — True if the drink contains alcohol.
+  String  volume       — Serving size string, e.g., "300ml", "200ml".
+
+getTaxedPrice() = basePrice * 1.12
+getItemType()   = "Drink"
+
+Constructor:
+  DrinkItem(String itemId, String name, String category, double basePrice,
+            boolean available, boolean isAlcoholic, String volume)
+
+── Order.java — implements Orderable ─────────────────────────────────────────
+
+Central domain object representing a customer's order. Holds all items,
+identity info, lifecycle status, and time of placement.
+
+Fields:
+  String          orderId        — Formatted as ORD-0001, ORD-0002, etc.
+  int             tableNumber    — Table the order belongs to.
+  String          customerName   — Name provided at the time of ordering.
+  String          assignedWaiter — Waiter name (optional, defaults to "").
+  OrderStatus     status         — Current lifecycle state (starts PENDING).
+  String          orderTime      — Formatted timestamp: "dd-MM-yyyy HH:mm".
+  List<MenuItem>  items          — Defensive copy of the selected menu items.
+
+Key methods:
+  getOrderTotal()
+      — Uses Java Stream API: items.stream().mapToDouble(MenuItem::getTaxedPrice).sum()
+      — Sums the taxed prices of all items.
+
+  getItemNames()
+      — Returns List<String> of item names via stream + Collectors.toList().
+
+  toCsvString()
+      — Serialises the order to a comma-separated string for the audit log.
+      — Format: orderId,tableNumber,customerName,status,total,orderTime,items
+      — Items are pipe-separated within the CSV row.
+
+── Bill.java — implements Payable ────────────────────────────────────────────
+
+Generated from a completed order by BillingService. Stores all financial
+details and tracks payment status.
+
+Fields:
+  String        billId         — Formatted as BILL-0001, BILL-0002, etc.
+  String        orderId        — The order this bill belongs to.
+  double        subtotal       — Sum of all base prices (pre-tax).
+  double        taxAmount      — Sum of (taxedPrice - basePrice) for all items.
+  double        totalAmount    — subtotal + taxAmount.
+  double        discount       — Discount applied (0 by default).
+  PaymentMethod paymentMethod  — Set when payment is processed.
+  boolean       paid           — False until processPayment() is called.
+
+getTotal() = totalAmount - discount    (implements Payable)
+markAsPaid() sets paid = true
+
+generateReceiptText()
+    — Builds a formatted plain-text receipt string with:
+      Bill ID, Order ID, Subtotal, Tax, Discount (if any), Total,
+      Payment Method, and Status (PAID / UNPAID).
+    — Uses a StringBuilder with separator lines of '=' and '-'.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 8 — REPOSITORY CLASSES  (package: repository)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── MenuRepository.java — implements Manageable<MenuItem> ─────────────────────
+
+Manages the full menu in memory as a List<MenuItem> and persists it to
+data/menu.csv. On construction it attempts to load from the CSV file. If the
+file is empty or missing it seeds 12 default items and writes them to disk.
+
+Default seed items (loaded on first run):
+  Food (8):  Butter Chicken, Paneer Tikka, Dal Makhani, Chicken Biryani,
+             Veg Biryani, Garlic Naan, Samosa, Gulab Jamun
+  Drinks (4): Mango Lassi, Masala Chai, Cold Coffee, Fresh Lime Soda
+
+CSV file path : data/menu.csv
+CSV header    : itemId,name,basePrice,category,itemType,available,extra1,extra2
+
+  extra1 = isVegetarian (Food)  |  isAlcoholic (Drink)
+  extra2 = prepTimeMinutes (Food)  |  volume string (Drink)
+
+Example rows:
+  F001,Butter Chicken,280.0,Main Course,Food,true,false,20
+  D001,Mango Lassi,90.0,Beverages,Drink,true,false,300ml
+
+loadFromFile()
+  — Opens the CSV with BufferedReader / FileReader.
+  — Skips the header line.
+  — Reads each line, splits by comma, checks "itemType" column.
+  — Creates FoodItem or DrinkItem accordingly.
+  — Handles NumberFormatException and IOException gracefully.
+
+saveToFile()
+  — Opens the CSV in overwrite mode with FileWriter + BufferedWriter.
+  — Writes the header then one row per MenuItem in memory.
+  — Polymorphically casts each item to FoodItem or DrinkItem to get extra1/extra2.
+
+add(MenuItem)    — Appends to list then calls saveToFile().
+remove(String)   — Uses removeIf() then calls saveToFile().
+findById(String) — Stream filter, returns first match or null.
+getAll()         — Returns a new ArrayList copy.
+getAvailableItems() — Filters for items where isAvailable() == true.
+
+── OrderRepository.java ──────────────────────────────────────────────────────
+
+Stores all orders in memory using HashMap<String, Order> (keyed by orderId).
+Appends new orders to data/orders.csv as an audit trail — the CSV is never
+overwritten, only appended to.
+
+CSV file path : data/orders.csv
+CSV header    : orderId,tableNumber,customerName,status,total,orderTime,items
+
+  items = pipe-separated item names within the CSV row.
+
+Example row:
+  ORD-0001,3,John,READY,326.20,13-04-2026 17:30,Paneer Tikka|Mango Lassi
+
+Methods:
+  save(Order)
+      — Puts the order into the HashMap.
+      — Calls appendToCsv() to write one row to the audit file.
+
+  appendToCsv(Order)
+      — Opens the CSV in append mode (FileWriter true flag) + BufferedWriter.
+      — Writes order.toCsvString() followed by a newline.
+
+  findById(String)    — Direct HashMap.get() lookup.
+  getAll()            — Returns new ArrayList from HashMap values.
+  updateStatus(id, status) — Updates the in-memory order only (no CSV update).
+  getByStatus(status) — Filters HashMap values by OrderStatus using a stream.
+
+ensureHeaderExists()
+  — Called in the constructor. Creates the CSV file with the header row if
+    the file does not yet exist.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 9 — SERVICE CLASSES  (package: service)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── OrderService.java ─────────────────────────────────────────────────────────
+
+Core business logic for the order lifecycle. Depends on OrderRepository and
+OrderQueueManager (obtained via singleton getInstance()).
+
+Field:
+  int orderCounter  — Incremented for each new order; formats as ORD-XXXX.
+
+placeOrder(int tableNumber, String customerName, List<MenuItem> items)
+  throws OrderException
+  — Validates: tableNumber > 0, customerName not blank, items not empty.
+  — Increments orderCounter, formats orderId as ORD-0001 etc.
+  — Creates a new Order (initial status = PENDING).
+  — Saves to OrderRepository, then enqueues in OrderQueueManager.
+  — Returns the created Order object.
+
+cancelOrder(String orderId)  throws OrderException
+  — Looks up the order; throws if not found.
+  — Throws if status is SERVED, READY, or already CANCELLED.
+  — Calls orderRepository.updateStatus(orderId, CANCELLED).
+
+markAsServed(String orderId)  throws OrderException
+  — Looks up the order; throws if not found.
+  — Throws if status is NOT READY.
+  — Calls orderRepository.updateStatus(orderId, SERVED).
+
+getAllOrders()   — Delegates to orderRepository.getAll().
+getOrderById()  — Delegates to orderRepository.findById().
+
+── KitchenService.java ───────────────────────────────────────────────────────
+
+Manages order status transitions. All public methods are synchronized to ensure
+thread safety when called from the background KitchenWorkerThread.
+
+advanceOrderStatus(String orderId)   [synchronized]
+  — Reads the current status and advances it one step:
+      PENDING → RECEIVED → PREPARING → READY → SERVED
+  — Calls orderRepository.updateStatus() for the new status.
+
+setOrderStatus(String orderId, OrderStatus status)   [synchronized]
+  — Direct status override. Used by KitchenWorkerThread.
+
+getPendingOrderCount()
+  — Counts all orders with status PENDING, RECEIVED, or PREPARING.
+  — Useful for monitoring kitchen load.
+
+── BillingService.java ───────────────────────────────────────────────────────
+
+Creates Bill objects and processes payments. Bills are stored in a local
+HashMap<String, Bill> (keyed by billId). Demonstrates the Payable interface
+and checked PaymentException handling.
+
+Field:
+  int billCounter  — Incremented for each new bill; formats as BILL-XXXX.
+
+generateBill(String orderId)   throws PaymentException
+  — Throws if the order is not found.
+  — If a bill already exists for this order, returns the existing bill
+    (idempotent — avoids duplicate bills).
+  — Calculates:
+      subtotal  = sum of item.getBasePrice()
+      taxAmount = sum of (item.getTaxedPrice() - item.getBasePrice())
+  — Creates a new Bill and stores it in the local HashMap.
+  — Returns the Bill object.
+
+applyDiscount(String billId, double discountAmount)   throws PaymentException
+  — Throws if bill not found, already paid, or discount is out of range
+    (must be >= 0 and <= bill.getTotal()).
+  — Sets bill.setDiscount(discountAmount).
+
+processPayment(String billId, PaymentMethod method, double amountPaid)
+  throws PaymentException
+  — Throws if bill not found or already paid.
+  — Throws if amountPaid < bill.getTotal() (insufficient funds).
+  — Sets paymentMethod, calls markAsPaid().
+  — Returns the change: amountPaid - bill.getTotal().
+
+getBill(String billId)         — Direct HashMap lookup.
+getBillForOrder(String orderId) — Scans bills to find one matching orderId.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 10 — CONCURRENCY  (package: concurrent)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── OrderQueueManager.java — Singleton ────────────────────────────────────────
+
+A single shared, thread-safe queue that all kitchen workers pull from.
+Uses the Singleton design pattern — only one instance exists for the
+entire application lifetime.
+
+Implementation:
+  private static OrderQueueManager instance;              — singleton holder
+  LinkedBlockingQueue<Order> queue = new LinkedBlockingQueue<>(50)
+
+getInstance()   [synchronized]
+  — Returns the single shared instance. Lazy-initialised on first call.
+  — synchronized keyword prevents two threads simultaneously creating instances.
+
+enqueue(Order)
+  — Calls queue.put(order). Blocks if the queue is at capacity (50 orders).
+  — Handles InterruptedException by re-interrupting the thread.
+
+dequeue()   throws InterruptedException
+  — Calls queue.take(). Blocks the calling thread until an order is available.
+  — This is the producer-consumer pattern in action.
+
+size()  — Returns current number of orders in the queue.
+
+── KitchenWorkerThread.java — implements Runnable ────────────────────────────
+
+Simulates a kitchen chef working in the background. Runs on a single daemon
+thread started by MainFrame. A daemon thread does not prevent JVM shutdown.
+
+Fields:
+  KitchenService kitchenService  — Used to update order statuses.
+  Notifiable     notifiable      — Callback to alert the UI when ready.
+  volatile boolean running       — volatile ensures main-thread writes are
+                                   immediately visible to this background thread.
+
+run()
+  — Infinite loop while running == true.
+  — Calls OrderQueueManager.getInstance().dequeue() — blocks until an order
+    arrives in the queue.
+  — Calls processOrder(order).
+  — Handles InterruptedException by breaking out of the loop cleanly.
+
+processOrder(Order)   throws InterruptedException
+  Step 1: Thread.sleep(500ms) → setOrderStatus(RECEIVED)
+  Step 2: setOrderStatus(PREPARING)  (immediately)
+  Step 3: Thread.sleep(itemCount × 2000ms) → setOrderStatus(READY)
+  Step 4: notifiable.onOrderReady(orderId, tableNumber)
+          → triggers the UI notification banner.
+
+stop()  — Sets running = false to signal the loop to exit gracefully.
+
+── NotificationThread.java — implements Runnable, Notifiable ─────────────────
+
+Acts as a message relay between the kitchen background thread and the Swing UI.
+It uses its own internal BlockingQueue to decouple the producer (kitchen thread)
+from the consumer (UI notification display).
+
+Inner interface:
+  NotificationListener — onNotification(String message, boolean isReady)
+    — Implemented by a lambda in MainFrame that calls showNotification().
+
+Inner class:
+  NotificationEvent — holds String message + boolean isReady.
+
+Fields:
+  LinkedBlockingQueue<NotificationEvent> eventQueue — decouples threads.
+  NotificationListener listener  — set by MainFrame after construction.
+  volatile boolean running       — stop condition flag.
+
+onOrderReady(String orderId, int tableNumber)   [synchronized]
+  — Formats a "ready" message string.
+  — Calls eventQueue.offer(new NotificationEvent(message, true)).
+  — synchronized here because this is called from the kitchen thread while
+    run() may be processing another event on the notification thread.
+
+onOrderCancelled(String orderId)   [synchronized]
+  — Formats a "cancelled" message string.
+  — Calls eventQueue.offer(new NotificationEvent(message, false)).
+
+run()
+  — Infinite loop while running == true.
+  — Calls eventQueue.take() — blocks until a notification event arrives.
+  — Calls processEvent(event).
+
+processEvent(NotificationEvent)
+  — Invokes listener.onNotification(message, isReady) on whatever thread
+    NotificationThread is running on. MainFrame's listener uses
+    SwingUtilities.invokeLater() to safely update the UI on the EDT.
+
+Thread Summary:
+  Thread Name            Type      Daemon   Purpose
+  ─────────────────────────────────────────────────────────────────────
+  main (Swing EDT)       System    No       UI event loop (all UI work)
+  KitchenWorkerThread    Daemon    Yes      Processes orders from queue
+  NotificationThread     Daemon    Yes      Forwards kitchen alerts to UI
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 11 — UI CLASSES  (package: ui)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+All panels extend JPanel and are hosted inside a JTabbedPane in MainFrame.
+The dark colour theme uses shades of near-black with coloured accents per tab:
+  Menu tab    — Gold accent    (255, 200, 60)
+  Orders tab  — Cyan accent    (60, 200, 220)
+  Billing tab — Orange accent  (255, 140, 40)
+
+── MainFrame.java ────────────────────────────────────────────────────────────
+
+The top-level JFrame. Window size: 1100 × 720 px. Centred on screen.
+
+Layout:
+  NORTH  — Header bar (title + subtitle)
+  CENTER — JTabbedPane with three tabs
+  SOUTH  — Notification banner (JLabel)
+
+Dependency wiring (all done in the constructor):
+  MenuRepository    menuRepo
+  OrderRepository   orderRepo
+  KitchenService    kitchenSvc   ← depends on orderRepo
+  OrderService      orderSvc     ← depends on orderRepo
+  BillingService    billingSvc   ← depends on orderRepo
+
+Thread startup:
+  KitchenWorkerThread is wrapped in a Thread, set as daemon, and started.
+  NotificationThread  is wrapped in a Thread, set as daemon, and started.
+  NotificationThread gets a listener lambda that calls showNotification().
+
+showNotification(String message, boolean isReady)
+  — Updates the bottom notification JLabel text.
+  — Green colour if isReady == true, red if false.
+  — Starts a javax.swing.Timer (5 000 ms, non-repeating) that resets the
+    label back to "System ready..." when it fires.
+  — Always called via SwingUtilities.invokeLater() from the listener lambda.
+
+── MenuPanel.java ────────────────────────────────────────────────────────────
+
+Allows staff to view, add, remove, and toggle menu items.
+
+Layout  : BorderLayout
+  NORTH  — Title label "Menu Management"
+  CENTER — JScrollPane containing a JTable (read-only)
+  SOUTH  — Form panel + button row
+
+Table columns  : ID | Name | Base Price | Category | Type | Taxed Price | Available
+
+Form fields:
+  Type (JComboBox: Food / Drink),  ID,  Name,  Price,  Category,
+  Veg/Alcoholic (JCheckBox),  Prep Time or Volume (JTextField)
+
+Buttons:
+  Add Item         — Reads form, validates, creates FoodItem or DrinkItem,
+                     calls menuRepository.add(), then refreshTable().
+  Remove Selected  — Gets selected row ID, confirms with dialog,
+                     calls menuRepository.remove().
+  Toggle Avail.    — Flips item.setAvailable(!current), calls saveToFile().
+  Refresh          — Clears and repopulates the table model.
+
+refreshTable()
+  — Calls menuRepository.getAll() and populates DefaultTableModel row by row.
+
+── OrderPanel.java ───────────────────────────────────────────────────────────
+
+Central order management screen. Split horizontally into a form on the left
+and a live status table on the right.
+
+Layout  : BorderLayout
+  NORTH  — Title label "Order Management"
+  CENTER — JSplitPane (45% left / 55% right)
+  SOUTH  — Button row
+
+Left side — New Order Form:
+  JTextField  tableField     — Table number input.
+  JTextField  customerField  — Customer name input.
+  JTable      menuSelectTable — Shows available menu items; multi-select enabled.
+    Columns  : ID | Name | Type | Price (Rs)
+  Populated by menuRepository.getAvailableItems().
+
+Right side — Live Order Status:
+  JTable  orderStatusTable
+    Columns : Order ID | Table | Customer | Status | Total (Rs) | Time
+  Orders sorted newest first (reverse order ID string comparison).
+
+Buttons:
+  Place Order   — Reads form, resolves selected items, calls
+                  orderService.placeOrder(), shows confirmation dialog.
+  Mark Served   — Gets selected order ID, calls orderService.markAsServed().
+  Cancel Order  — Confirms with dialog, calls orderService.cancelOrder().
+  Refresh Now   — Manually triggers refreshOrderStatus().
+
+Auto-refresh:
+  java.util.Timer (daemon) schedules refreshOrderStatus() every 3 000 ms.
+  refreshOrderStatus() always runs inside SwingUtilities.invokeLater() to
+  update the table safely on the Event Dispatch Thread.
+
+── BillingPanel.java ─────────────────────────────────────────────────────────
+
+Handles the billing workflow from bill generation through payment.
+
+Layout  : BorderLayout
+  NORTH  — Title label "Billing & Payment"
+  CENTER — JSplitPane (40% left controls / 60% right receipt)
+
+Left side — Billing Controls (BoxLayout vertical):
+  JComboBox   orderCombo      — Lists orders as "ORD-XXXX | Table N | Name [Status]".
+  Generate Bill button        — Calls billingService.generateBill(orderId).
+  JLabel      billIdLabel     — Displays current Bill ID.
+  JLabel      totalLabel      — Displays current total due.
+  JTextField  discountField   — Discount amount entry.
+  Apply Discount button       — Calls billingService.applyDiscount().
+  JComboBox   paymentCombo    — Lists all PaymentMethod enum values.
+  JTextField  amountPaidField — Amount the customer is paying.
+  Process Payment button      — Calls billingService.processPayment(), shows change.
+  Refresh Orders button       — Reloads the order combo box.
+
+Right side — Receipt Area:
+  JTextArea   receiptArea  — Monospaced font (Courier New 13pt).
+                              Green text on near-black background.
+                              Displays bill.generateReceiptText() output.
+
+Workflow:
+  1. Select an order from the combo.
+  2. Click Generate Bill  → receipt shows subtotal + tax.
+  3. Optionally enter discount and click Apply Discount.
+  4. Select payment method, enter amount paid.
+  5. Click Process Payment → receipt updates, change shown in a dialog.
+
+All PaymentException errors are caught and shown via JOptionPane error dialogs.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 12 — OOP CONCEPTS DEMONSTRATED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Concept              Where Used / How Demonstrated
+──────────────────── ────────────────────────────────────────────────────────
+Inheritance          Customer extends Person; FoodItem / DrinkItem extend
+                     MenuItem.
+
+Abstraction          Person (abstract class) — forces subclasses to implement
+                     getRole(). MenuItem (abstract class) — forces subclasses
+                     to implement getTaxedPrice() and getItemType().
+
+Interface            Manageable<T> (MenuRepository), Orderable (Order),
+                     Payable (Bill), Notifiable (NotificationThread).
+                     All four are actively used in service / concurrent layers.
+
+Polymorphism         A List<MenuItem> in Order holds both FoodItem and DrinkItem
+                     objects. Calling getTaxedPrice() dispatches to the correct
+                     subclass at runtime (dynamic dispatch). OrderService
+                     accepts Orderable references; BillingService uses Payable.
+
+Encapsulation        Every field in every model class is declared private.
+                     Access is via public getters and setters only.
+
+Exception Handling   Checked: OrderException (OrderService), PaymentException
+                     (BillingService) — callers must handle or declare.
+                     Unchecked: StockException — does not require declaration.
+
+Multithreading       KitchenWorkerThread implements Runnable — processes orders
+                     asynchronously. NotificationThread implements Runnable —
+                     relays kitchen alerts. Both run as daemon threads.
+
+Thread Safety        KitchenService methods are synchronized. NotificationThread
+                     onOrderReady / onOrderCancelled are synchronized.
+                     volatile boolean running in KitchenWorkerThread.
+                     LinkedBlockingQueue used for producer-consumer pattern.
+
+Singleton Pattern    OrderQueueManager.getInstance() — synchronized static
+                     factory method. Only one queue instance ever exists.
+
+File I/O             MenuRepository: BufferedReader/FileReader to load;
+                     BufferedWriter/FileWriter to save (overwrite mode).
+                     OrderRepository: BufferedWriter/FileWriter append mode
+                     for the audit CSV.
+
+Generics             Manageable<T> interface uses a type parameter T.
+                     MenuRepository implements Manageable<MenuItem>.
+
+Lambda / Streams     Order.getOrderTotal() uses mapToDouble + sum.
+                     Order.getItemNames() uses map + Collectors.toList().
+                     BillingService uses mapToDouble for subtotal / tax calc.
+                     removeIf() uses a lambda predicate in MenuRepository.
+
+Collections          ArrayList (menu list, order items)
+                     HashMap<String, Order> (OrderRepository in-memory store)
+                     HashMap<String, Bill>  (BillingService bill store)
+                     LinkedBlockingQueue<Order> (OrderQueueManager)
+                     LinkedBlockingQueue<NotificationEvent> (NotificationThread)
+
+Swing GUI            JFrame (MainFrame), JPanel, JTable, DefaultTableModel,
+                     JTabbedPane, JSplitPane, JScrollPane, JComboBox, JCheckBox,
+                     JTextField, JTextArea, JButton, JLabel, JOptionPane,
+                     SwingUtilities.invokeLater(), javax.swing.Timer.
+
+Design Pattern       Singleton — OrderQueueManager.
+                     Observer / Callback — NotificationListener interface
+                     used to decouple the notification thread from the UI.
+                     Producer-Consumer — BlockingQueue between kitchen and
+                     notification threads.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 13 — TAX AND ID REFERENCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Tax Calculations:
+
+  Item Type   Tax Rate   Formula                Example (Rs. 100 base)
+  ─────────── ────────── ──────────────────────  ──────────────────────
+  Food        5% GST     basePrice × 1.05        Rs. 105.00
+  Drink       12% GST    basePrice × 1.12        Rs. 112.00
+
+Bill calculation breakdown:
+  subtotal    = sum of all basePrice values
+  taxAmount   = sum of (getTaxedPrice() − basePrice) for all items
+  totalAmount = subtotal + taxAmount
+  getTotal()  = totalAmount − discount    ← what the customer actually pays
+
+ID Formats:
+
+  Entity      Format       Example       Counter Location
+  ─────────── ──────────── ───────────── ────────────────────────────
+  Order       ORD-XXXX     ORD-0001      orderCounter in OrderService
+  Bill        BILL-XXXX    BILL-0001     billCounter in BillingService
+  MenuItem    Manual       F001 / D001   Entered manually in MenuPanel
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 14 — CLASS HIERARCHY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Object
+├── Person  (abstract)
+│     └── Customer
+├── MenuItem  (abstract)
+│     ├── FoodItem
+│     └── DrinkItem
+├── Order              implements Orderable
+├── Bill               implements Payable
+├── OrderQueueManager  (Singleton)
+├── KitchenWorkerThread  implements Runnable
+└── NotificationThread   implements Runnable, Notifiable
+
+Interfaces:
+├── Manageable<T>   — add, remove, findById, getAll
+├── Orderable       — getOrderId, getStatus, setStatus, getOrderTotal, getItemNames
+├── Payable         — getTotal, isPaid, markAsPaid
+└── Notifiable      — onOrderReady, onOrderCancelled
+
+Exceptions:
+├── Exception
+│     ├── OrderException    (checked)
+│     └── PaymentException  (checked)
+└── RuntimeException
+      └── StockException    (unchecked)
+
+Repositories:
+├── MenuRepository    implements Manageable<MenuItem>
+└── OrderRepository   (standalone — no interface)
+
+Services:
+├── OrderService
+├── KitchenService
+└── BillingService
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 15 — ORDER PROCESSING WORKFLOW (END-TO-END)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Step  Actor                  What Happens
+────  ─────────────────────  ──────────────────────────────────────────────────
+1     User / OrderPanel      Enter table number, customer name, select items.
+                             Click "Place Order".
+                             OrderService.placeOrder() validates inputs.
+                             Order created with status = PENDING.
+                             Order saved to OrderRepository (HashMap + CSV).
+                             Order enqueued in OrderQueueManager.
+
+2     KitchenWorkerThread    Dequeues the order (blocking take()).
+      (background daemon)    Sleeps 500 ms → sets status = RECEIVED.
+                             Sets status = PREPARING immediately.
+                             Sleeps (item count × 2 000 ms) to simulate cooking.
+                             Sets status = READY.
+                             Calls notifiable.onOrderReady(orderId, tableNumber).
+
+3     NotificationThread     Receives onOrderReady() call (synchronized).
+      (background daemon)    Adds NotificationEvent to its internal queue.
+                             Dequeues event, calls listener.onNotification().
+
+4     MainFrame (EDT)        Listener lambda receives the notification.
+                             SwingUtilities.invokeLater() posts UI update.
+                             Notification banner turns green with the message.
+                             javax.swing.Timer set to reset banner after 5 000 ms.
+
+5     OrderPanel             Auto-refresh TimerTask fires every 3 000 ms.
+      (EDT via invokeLater)  orderStatusTable updated — Status column shows READY.
+
+6     User / OrderPanel      Selects the READY order from the table.
+                             Clicks "Mark Served".
+                             OrderService.markAsServed() validates READY status.
+                             Status updated to SERVED.
+
+7     User / BillingPanel    Clicks "Refresh Orders", selects the SERVED order.
+                             Clicks "Generate Bill".
+                             BillingService.generateBill() calculates
+                             subtotal + taxAmount → creates Bill object.
+                             Receipt text shown in receiptArea.
+
+8     User / BillingPanel    (Optional) Enter discount amount, click
+                             "Apply Discount".
+                             BillingService.applyDiscount() validates and sets
+                             bill.discount. Receipt and total label update.
+
+9     User / BillingPanel    Select payment method from dropdown.
+                             Enter amount paid, click "Process Payment".
+                             BillingService.processPayment() validates amount,
+                             marks bill paid, returns change.
+                             Dialog shows: "Payment successful! Change: Rs. X.XX"
+                             Receipt updates to show PAID status.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 16 — CSV FILE FORMATS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── data/menu.csv ─────────────────────────────────────────────────────────────
+
+Mode    : Overwrite on every add / remove / toggle operation.
+Created : Automatically on first run; seeded with 12 default items.
+
+Header  : itemId,name,basePrice,category,itemType,available,extra1,extra2
+
+Column descriptions:
+  itemId    — Unique identifier (e.g., F001, D001).
+  name      — Display name of the item.
+  basePrice — Pre-tax price as a decimal.
+  category  — Menu section (e.g., Main Course, Beverages, Starters).
+  itemType  — "Food" or "Drink".
+  available — "true" or "false".
+  extra1    — isVegetarian (Food) or isAlcoholic (Drink).
+  extra2    — prepTimeMinutes as integer (Food) or volume string (Drink).
+
+Sample rows:
+  F001,Butter Chicken,280.0,Main Course,Food,true,false,20
+  F002,Paneer Tikka,180.0,Starters,Food,true,true,15
+  D001,Mango Lassi,90.0,Beverages,Drink,true,false,300ml
+  D002,Masala Chai,40.0,Beverages,Drink,true,false,200ml
+
+── data/orders.csv ───────────────────────────────────────────────────────────
+
+Mode    : Append-only — rows are never deleted or overwritten.
+Created : Automatically on first run (header written immediately).
+
+Header  : orderId,tableNumber,customerName,status,total,orderTime,items
+
+Column descriptions:
+  orderId      — Formatted ID (e.g., ORD-0001).
+  tableNumber  — Integer table number.
+  customerName — Name given at order placement.
+  status       — OrderStatus enum name at time of save (e.g., PENDING).
+  total        — Order total (taxed) as decimal with 2 decimal places.
+  orderTime    — Timestamp in "dd-MM-yyyy HH:mm" format.
+  items        — Pipe-separated item names (e.g., Butter Chicken|Mango Lassi).
+
+Note: Status in the CSV reflects the status AT TIME OF SAVE (always PENDING
+when first written). The in-memory HashMap holds the live up-to-date status.
+The CSV serves as an immutable audit trail only.
+
+Sample row:
+  ORD-0001,3,Rahul,PENDING,373.80,18-04-2026 19:10,Butter Chicken|Mango Lassi
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOPIC 17 — LINE COUNT BREAKDOWN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+File                     Lines   Package
+──────────────────────── ─────── ──────────────
+OrderPanel.java            234   ui
+BillingPanel.java          229   ui
+MenuPanel.java             206   ui
+MenuRepository.java        120   repository
+MainFrame.java             104   ui
+BillingService.java         76   service
+Bill.java                   66   model
+OrderService.java           64   service
+Order.java                  58   model
+OrderRepository.java        54   repository
+NotificationThread.java     52   concurrent
+KitchenWorkerThread.java    43   concurrent
+KitchenService.java         41   service
+MenuItem.java               31   model
+OrderQueueManager.java      30   concurrent
+Person.java                 26   model
+FoodItem.java               24   model
+DrinkItem.java              24   model
+OrderStatus.java            20   enums
+PaymentMethod.java          19   enums
+TableStatus.java            18   enums
+Customer.java               18   model
+PaymentException.java       17   exception
+OrderException.java         17   exception
+StockException.java         17   exception
+run.bat                     12   (root)
+Orderable.java              10   interfaces
+Manageable.java              8   interfaces
+Main.java                    7   (root)
+Payable.java                 6   interfaces
+Notifiable.java              5   interfaces
+──────────────────────── ─────── ──────────────
+TOTAL                    1,656   (31 files)
+
+Layer summary:
+  UI layer            (4 files)  :  773 lines
+  Model layer         (7 files)  :  247 lines
+  Service layer       (3 files)  :  181 lines
+  Repository layer    (2 files)  :  174 lines
+  Concurrency layer   (3 files)  :  125 lines
+  Enums               (3 files)  :   57 lines
+  Exceptions          (3 files)  :   51 lines
+  Interfaces          (4 files)  :   29 lines
+  Main + run.bat      (2 files)  :   19 lines
+
+
+================================================================================
+End of Documentation — Restaurant Management System
+================================================================================
