@@ -14,206 +14,157 @@ import java.util.stream.Collectors;
 /**
  * OrderHistoryPanel — Unit IV: Event Handling, KeyListener, ActionListener
  *                     Unit III: reads orders via OrderRepository.loadFromFile()
- * Shows all past orders in a JTable with live search and status filtering.
  */
 public class OrderHistoryPanel extends JPanel {
-
     private final OrderRepository orderRepo;
     private DefaultTableModel tableModel;
     private JTable table;
     private JTextField searchField;
     private JComboBox<String> statusFilter;
     private List<Order> allOrders;
+    private JLabel revenueLabel, orderCountLabel;
 
-    private static final Color BG      = new Color(25, 25, 35);
-    private static final Color CARD_BG = new Color(32, 32, 48);
-    private static final Color ACCENT  = new Color(99, 179, 237);
-    private static final Color FG      = new Color(220, 220, 235);
+    private static final Color BG = new Color(25, 25, 35), CARD = new Color(32, 32, 48);
+    private static final Color ACCENT = new Color(99, 179, 237), FG = new Color(210, 210, 225);
 
     public OrderHistoryPanel(OrderRepository orderRepo) {
         this.orderRepo = orderRepo;
         setLayout(new BorderLayout(0, 0));
         setBackground(BG);
-
         add(buildToolbar(), BorderLayout.NORTH);
         add(buildTable(),   BorderLayout.CENTER);
-
+        add(buildSummary(), BorderLayout.SOUTH);
         loadOrders();
     }
 
-    // ── Toolbar: search + status filter + refresh ──────────────────────────
     private JPanel buildToolbar() {
-        JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 10));
-        bar.setBackground(new Color(20, 20, 32));
-        bar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(50, 50, 70)));
+        JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
+        bar.setBackground(new Color(20, 20, 30));
+        bar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(50, 50, 72)));
 
-        JLabel searchLbl = new JLabel("🔍 Search:");
-        searchLbl.setForeground(FG);
-        searchLbl.setFont(new Font("SansSerif", Font.BOLD, 13));
+        bar.add(lbl("Search:"));
+        searchField = new JTextField(18);
+        searchField.setBackground(new Color(40, 40, 58)); searchField.setForeground(FG);
+        searchField.setCaretColor(ACCENT);
+        searchField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(70, 70, 100)),
+                BorderFactory.createEmptyBorder(3, 6, 3, 6)));
+        bar.add(searchField);
 
-        searchField = new JTextField(20);
-        styleField(searchField);
+        bar.add(lbl("Status:"));
+        statusFilter = new JComboBox<>(new String[]{"All", "PENDING", "RECEIVED", "PREPARING", "READY", "SERVED", "CANCELLED"});
+        statusFilter.setBackground(new Color(40, 40, 58)); statusFilter.setForeground(FG);
+        bar.add(statusFilter);
 
-        JLabel filterLbl = new JLabel("Status:");
-        filterLbl.setForeground(FG);
-        filterLbl.setFont(new Font("SansSerif", Font.BOLD, 13));
-
-        statusFilter = new JComboBox<>(new String[]{
-                "All", "PENDING", "RECEIVED", "PREPARING", "READY", "SERVED", "CANCELLED"
-        });
-        styleCombo(statusFilter);
-
-        JButton refreshBtn = new JButton("⟳ Refresh");
-        styleButton(refreshBtn, new Color(60, 140, 200));
-        refreshBtn.addActionListener(e -> loadOrders());
+        JButton refBtn = new JButton("Refresh");
+        refBtn.setBackground(new Color(55, 130, 195)); refBtn.setForeground(Color.WHITE);
+        refBtn.setFont(new Font("SansSerif", Font.BOLD, 12)); refBtn.setFocusPainted(false);
+        refBtn.setBorder(BorderFactory.createEmptyBorder(5, 12, 5, 12));
+        refBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        refBtn.addActionListener(e -> loadOrders());
+        bar.add(refBtn);
 
         // Unit IV – KeyListener for live search
         searchField.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyReleased(KeyEvent e) {
-                applyFilter();
-            }
+            @Override public void keyReleased(KeyEvent e) { applyFilter(); }
         });
-
-        // Unit IV – ActionListener for dropdown filter
+        // Unit IV – ActionListener for dropdown
         statusFilter.addActionListener(e -> applyFilter());
-
-        bar.add(searchLbl);
-        bar.add(searchField);
-        bar.add(filterLbl);
-        bar.add(statusFilter);
-        bar.add(refreshBtn);
         return bar;
     }
 
-    // ── Table setup ─────────────────────────────────────────────────────────
     private JScrollPane buildTable() {
         String[] cols = {"Order ID", "Table", "Customer", "Status", "Total (Rs.)", "Time"};
         tableModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         table = new JTable(tableModel);
-        table.setBackground(CARD_BG);
-        table.setForeground(FG);
+        table.setBackground(CARD); table.setForeground(FG);
         table.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        table.setRowHeight(28);
-        table.setShowGrid(false);
-        table.setIntercellSpacing(new Dimension(0, 0));
+        table.setRowHeight(26); table.setShowGrid(false);
         table.getTableHeader().setBackground(new Color(40, 40, 60));
         table.getTableHeader().setForeground(ACCENT);
         table.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 13));
         table.setSelectionBackground(new Color(60, 80, 120));
-        table.setSelectionForeground(Color.WHITE);
 
         // Unit IV – mouse listener for row-click detail popup
         table.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) showDetail();
-            }
+            @Override public void mouseClicked(MouseEvent e) { if (e.getClickCount() == 2) showDetail(); }
         });
 
-        JScrollPane scroll = new JScrollPane(table);
-        scroll.getViewport().setBackground(CARD_BG);
-        scroll.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
-        scroll.setBackground(BG);
-        return scroll;
+        JScrollPane sp = new JScrollPane(table);
+        sp.getViewport().setBackground(CARD);
+        sp.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+        return sp;
     }
 
-    // ── Load / Filter ────────────────────────────────────────────────────────
+    private JPanel buildSummary() {
+        JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 8));
+        bar.setBackground(new Color(20, 20, 30));
+        bar.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(50, 50, 72)));
+
+        orderCountLabel = new JLabel("Total Orders: 0");
+        orderCountLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
+        orderCountLabel.setForeground(new Color(154, 117, 235));
+        bar.add(orderCountLabel);
+
+        revenueLabel = new JLabel("Total Revenue: Rs. 0.00");
+        revenueLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
+        revenueLabel.setForeground(new Color(72, 207, 173));
+        bar.add(revenueLabel);
+
+        return bar;
+    }
+
     private void loadOrders() {
-        orderRepo.loadFromFile();          // Unit III – FileReader
+        orderRepo.loadFromFile();       // Unit III – FileReader
         allOrders = orderRepo.getAll();
         applyFilter();
     }
 
-    /** Live filter combining search text and status dropdown. */
     private void applyFilter() {
         String query  = searchField.getText().toLowerCase().trim();
         String chosen = (String) statusFilter.getSelectedItem();
-
         tableModel.setRowCount(0);
 
         // Unit IV – stream filter with lambda
-        List<Order> filtered = allOrders.stream()
-                .filter(o -> {
-                    boolean matchSearch = query.isEmpty()
-                            || o.getCustomerName().toLowerCase().contains(query)
-                            || o.getOrderId().toLowerCase().contains(query);
-                    boolean matchStatus = "All".equals(chosen)
-                            || o.getStatus().name().equals(chosen);
-                    return matchSearch && matchStatus;
-                })
-                .collect(Collectors.toList());
+        List<Order> filtered = allOrders.stream().filter(o -> {
+            boolean matchSearch = query.isEmpty()
+                    || o.getCustomerName().toLowerCase().contains(query)
+                    || o.getOrderId().toLowerCase().contains(query);
+            boolean matchStatus = "All".equals(chosen) || o.getStatus().name().equals(chosen);
+            return matchSearch && matchStatus;
+        }).collect(Collectors.toList());
 
+        double totalRevenue = 0;
         for (Order o : filtered) {
-            tableModel.addRow(new Object[]{
-                    o.getOrderId(),
-                    "Table " + o.getTableNumber(),
-                    o.getCustomerName(),
-                    o.getStatus().getDisplayName(),
-                    String.format("%.2f", o.getOrderTotal()),
-                    o.getOrderTime()
-            });
+            totalRevenue += o.getOrderTotal();
+            tableModel.addRow(new Object[]{o.getOrderId(), "Table " + o.getTableNumber(),
+                    o.getCustomerName(), o.getStatus().getDisplayName(),
+                    String.format("%.2f", o.getOrderTotal()), o.getOrderTime()});
         }
+
+        orderCountLabel.setText("Total Orders: " + filtered.size());
+        revenueLabel.setText(String.format("Total Revenue: Rs. %.2f", totalRevenue));
     }
 
-    /** Show a popup with full order details for the selected row. */
     private void showDetail() {
         int row = table.getSelectedRow();
         if (row < 0) return;
         String orderId = (String) tableModel.getValueAt(row, 0);
-
-        // Find the matching order in allOrders
-        Order found = allOrders.stream()
-                .filter(o -> o.getOrderId().equals(orderId))
-                .findFirst().orElse(null);
+        Order found = allOrders.stream().filter(o -> o.getOrderId().equals(orderId)).findFirst().orElse(null);
         if (found == null) return;
-
-        String items = found.getItemNames().isEmpty()
-                ? "(no items recorded)"
-                : String.join("\n  • ", found.getItemNames());
-
-        String detail = String.format(
-                "Order ID  : %s\nTable     : %d\nCustomer  : %s\nStatus    : %s\nTotal     : Rs. %.2f\nTime      : %s\n\nItems:\n  • %s",
+        String items = found.getItemNames().isEmpty() ? "(none)" : String.join(", ", found.getItemNames());
+        String detail = String.format("Order: %s\nTable: %d\nCustomer: %s\nStatus: %s\nTotal: Rs. %.2f\nTime: %s\nItems: %s",
                 found.getOrderId(), found.getTableNumber(), found.getCustomerName(),
-                found.getStatus().getDisplayName(), found.getOrderTotal(),
-                found.getOrderTime(), items);
-
+                found.getStatus().getDisplayName(), found.getOrderTotal(), found.getOrderTime(), items);
         JTextArea ta = new JTextArea(detail);
         ta.setFont(new Font("Monospaced", Font.PLAIN, 13));
-        ta.setEditable(false);
-        ta.setBackground(CARD_BG);
-        ta.setForeground(FG);
-        ta.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
-
-        JOptionPane.showMessageDialog(this, ta,
-                "Order Detail — " + orderId, JOptionPane.PLAIN_MESSAGE);
+        ta.setEditable(false); ta.setBackground(CARD); ta.setForeground(FG);
+        JOptionPane.showMessageDialog(this, ta, "Order Detail — " + orderId, JOptionPane.PLAIN_MESSAGE);
     }
 
-    // ── Style helpers ────────────────────────────────────────────────────────
-    private void styleField(JTextField f) {
-        f.setBackground(new Color(40, 40, 58));
-        f.setForeground(FG);
-        f.setCaretColor(ACCENT);
-        f.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        f.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(70, 70, 100)),
-                BorderFactory.createEmptyBorder(4, 8, 4, 8)));
-    }
-
-    private void styleCombo(JComboBox<String> cb) {
-        cb.setBackground(new Color(40, 40, 58));
-        cb.setForeground(FG);
-        cb.setFont(new Font("SansSerif", Font.PLAIN, 13));
-    }
-
-    private void styleButton(JButton btn, Color color) {
-        btn.setBackground(color);
-        btn.setForeground(Color.WHITE);
-        btn.setFont(new Font("SansSerif", Font.BOLD, 12));
-        btn.setFocusPainted(false);
-        btn.setBorder(BorderFactory.createEmptyBorder(6, 14, 6, 14));
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+    private JLabel lbl(String t) {
+        JLabel l = new JLabel(t); l.setForeground(FG); l.setFont(new Font("SansSerif", Font.BOLD, 12)); return l;
     }
 }

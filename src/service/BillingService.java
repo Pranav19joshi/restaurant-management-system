@@ -15,73 +15,43 @@ public class BillingService {
     private final Map<String, Bill> bills = new HashMap<>();
     private int billCounter = 0;
 
-    public BillingService(OrderRepository orderRepository) {
-        this.orderRepository = orderRepository;
-    }
+    public BillingService(OrderRepository orderRepository) { this.orderRepository = orderRepository; }
 
     public Bill generateBill(String orderId) throws PaymentException {
         Order order = orderRepository.findById(orderId);
-        if (order == null) {
-            throw new PaymentException("Order not found: " + orderId);
-        }
-        // Check if bill already exists for this order
-        for (Bill b : bills.values()) {
-            if (b.getOrderId().equals(orderId)) {
-                return b; // return existing bill
-            }
-        }
-
-        double subtotal = order.getItems().stream()
-                .mapToDouble(MenuItem::getBasePrice).sum();
-        double taxAmount = order.getItems().stream()
-                .mapToDouble(item -> item.getTaxedPrice() - item.getBasePrice()).sum();
-
-        billCounter++;
-        String billId = String.format("BILL-%04d", billCounter);
+        if (order == null) throw new PaymentException("Order not found: " + orderId);
+        for (Bill b : bills.values())
+            if (b.getOrderId().equals(orderId)) return b;
+        double subtotal  = order.getItems().stream().mapToDouble(MenuItem::getBasePrice).sum();
+        double taxAmount = order.getItems().stream().mapToDouble(i -> i.getTaxedPrice() - i.getBasePrice()).sum();
+        String billId = String.format("BILL-%04d", ++billCounter);
         Bill bill = new Bill(billId, orderId, subtotal, taxAmount);
         bills.put(billId, bill);
         return bill;
     }
 
-    public void applyDiscount(String billId, double discountAmount) throws PaymentException {
+    public void applyDiscount(String billId, double amount) throws PaymentException {
         Bill bill = bills.get(billId);
-        if (bill == null) {
-            throw new PaymentException("Bill not found: " + billId);
-        }
-        if (bill.isPaid()) {
-            throw new PaymentException("Bill is already paid.");
-        }
-        if (discountAmount < 0 || discountAmount > bill.getTotal()) {
-            throw new PaymentException("Discount must be between 0 and " + bill.getTotal(), discountAmount);
-        }
-        bill.setDiscount(discountAmount);
+        if (bill == null) throw new PaymentException("Bill not found: " + billId);
+        if (bill.isPaid()) throw new PaymentException("Bill is already paid.");
+        if (amount < 0 || amount > bill.getTotal()) throw new PaymentException("Discount must be 0-" + bill.getTotal(), amount);
+        bill.setDiscount(amount);
     }
 
-    public double processPayment(String billId, PaymentMethod paymentMethod, double amountPaid) throws PaymentException {
+    public double processPayment(String billId, PaymentMethod method, double amountPaid) throws PaymentException {
         Bill bill = bills.get(billId);
-        if (bill == null) {
-            throw new PaymentException("Bill not found: " + billId);
-        }
-        if (bill.isPaid()) {
-            throw new PaymentException("Bill is already paid.");
-        }
-        double totalDue = bill.getTotal();
-        if (amountPaid < totalDue) {
-            throw new PaymentException("Insufficient payment. Required: " + totalDue, amountPaid);
-        }
-        bill.setPaymentMethod(paymentMethod);
+        if (bill == null) throw new PaymentException("Bill not found: " + billId);
+        if (bill.isPaid()) throw new PaymentException("Bill is already paid.");
+        if (amountPaid < bill.getTotal()) throw new PaymentException("Insufficient payment. Required: " + bill.getTotal(), amountPaid);
+        bill.setPaymentMethod(method);
         bill.markAsPaid();
-        return amountPaid - totalDue; // change
+        return amountPaid - bill.getTotal();
     }
 
-    public Bill getBill(String billId) {
-        return bills.get(billId);
-    }
+    public Bill getBill(String billId) { return bills.get(billId); }
 
     public Bill getBillForOrder(String orderId) {
-        for (Bill b : bills.values()) {
-            if (b.getOrderId().equals(orderId)) return b;
-        }
+        for (Bill b : bills.values()) if (b.getOrderId().equals(orderId)) return b;
         return null;
     }
 }

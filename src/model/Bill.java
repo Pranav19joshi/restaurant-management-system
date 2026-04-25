@@ -4,35 +4,20 @@ import enums.PaymentMethod;
 import interfaces.Payable;
 
 public class Bill implements Payable {
-    private String billId;
-    private String orderId;
-    private double subtotal;
-    private double taxAmount;
-    private double discount;
-    private double totalAmount;
+    private String billId, orderId;
+    private double subtotal, taxAmount, discount, totalAmount;
     private PaymentMethod paymentMethod;
     private boolean paid;
 
     public Bill(String billId, String orderId, double subtotal, double taxAmount) {
-        this.billId = billId;
-        this.orderId = orderId;
-        this.subtotal = subtotal;
-        this.taxAmount = taxAmount;
-        this.totalAmount = subtotal + taxAmount;
-        this.discount = 0.0;
-        this.paid = false;
+        this.billId = billId; this.orderId = orderId;
+        this.subtotal = subtotal; this.taxAmount = taxAmount;
+        this.totalAmount = subtotal + taxAmount; this.discount = 0.0; this.paid = false;
     }
 
-    @Override
-    public double getTotal() {
-        return totalAmount - discount;
-    }
-
-    @Override
-    public boolean isPaid() { return paid; }
-
-    @Override
-    public void markAsPaid() { this.paid = true; }
+    @Override public double getTotal() { return totalAmount - discount; }
+    @Override public boolean isPaid() { return paid; }
+    @Override public void markAsPaid() { this.paid = true; }
 
     public String generateReceiptText() {
         StringBuilder sb = new StringBuilder();
@@ -44,18 +29,12 @@ public class Bill implements Payable {
         sb.append("----------------------------------------\n");
         sb.append(String.format("Subtotal  : Rs. %8.2f%n", subtotal));
         sb.append(String.format("Tax       : Rs. %8.2f%n", taxAmount));
-        if (discount > 0) {
-            sb.append(String.format("Discount  : Rs. %8.2f%n", discount));
-        }
+        if (discount > 0) sb.append(String.format("Discount  : Rs. %8.2f%n", discount));
         sb.append("----------------------------------------\n");
         sb.append(String.format("TOTAL     : Rs. %8.2f%n", getTotal()));
         sb.append("----------------------------------------\n");
-        if (paid) {
-            sb.append("Payment   : ").append(paymentMethod != null ? paymentMethod.getDisplayName() : "N/A").append("\n");
-            sb.append("Status    : PAID\n");
-        } else {
-            sb.append("Status    : UNPAID\n");
-        }
+        if (paid) { sb.append("Payment   : ").append(paymentMethod != null ? paymentMethod.getDisplayName() : "N/A").append("\n"); sb.append("Status    : PAID\n"); }
+        else sb.append("Status    : UNPAID\n");
         sb.append("========================================\n");
         sb.append("  Thank you for dining with us!\n");
         sb.append("========================================\n");
@@ -68,7 +47,7 @@ public class Bill implements Payable {
     public double getTaxAmount() { return taxAmount; }
     public double getTotalAmount() { return totalAmount; }
     public double getDiscount() { return discount; }
-    public void setDiscount(double discount) { this.discount = discount; }
+    public void setDiscount(double d) { this.discount = d; }
     public PaymentMethod getPaymentMethod() { return paymentMethod; }
-    public void setPaymentMethod(PaymentMethod paymentMethod) { this.paymentMethod = paymentMethod; }
+    public void setPaymentMethod(PaymentMethod m) { this.paymentMethod = m; }
 }

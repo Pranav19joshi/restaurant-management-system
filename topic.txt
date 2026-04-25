@@ -2,7 +2,7 @@
          RESTAURANT MANAGEMENT SYSTEM — COMPLETE PROJECT DOCUMENTATION
          Object Oriented Programming with Java  |  Semester 4
 ================================================================================
-Total Lines of Code : 1,656  (across 31 files — 30 .java + 1 .bat)
+Total Lines of Code : 1,537  (across 32 files — 31 .java + 1 .bat)
 Language            : Java (Swing GUI)
 Platform            : Windows (run.bat)
 ================================================================================
@@ -82,7 +82,7 @@ Main_project/
     ├── service/             ← OrderService, KitchenService, BillingService
     ├── concurrent/          ← OrderQueueManager, KitchenWorkerThread,
     │                           NotificationThread
-    └── ui/                  ← MainFrame, MenuPanel, OrderPanel, BillingPanel
+    └── ui/                  ← MainFrame, MenuPanel, OrderPanel, BillingPanel, OrderHistoryPanel
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -718,9 +718,16 @@ Layout  : BorderLayout
 Left side — New Order Form:
   JTextField  tableField     — Table number input.
   JTextField  customerField  — Customer name input.
-  JTable      menuSelectTable — Shows available menu items; multi-select enabled.
-    Columns  : ID | Name | Type | Price (Rs)
-  Populated by menuRepository.getAvailableItems().
+  JSplitPane (Vertical)      — Splits menu selection and cart.
+  
+  Top part (Menu):
+    JTable  menuSelectTable  — Shows available menu items (single select).
+    JSpinner qtySpinner      — To select quantity (1-99).
+    JButton addBtn, removeBtn, clearBtn.
+    
+  Bottom part (Cart):
+    JTable cartTable         — Shows selected items, quantities, unit prices, and subtotals.
+    JLabel cartTotalLabel    — Running total for the cart.
 
 Right side — Live Order Status:
   JTable  orderStatusTable
@@ -728,16 +735,32 @@ Right side — Live Order Status:
   Orders sorted newest first (reverse order ID string comparison).
 
 Buttons:
-  Place Order   — Reads form, resolves selected items, calls
-                  orderService.placeOrder(), shows confirmation dialog.
+  Place Order   — Reads form, resolves cart items, handles duplication based on quantity,
+                  calls orderService.placeOrder(), shows confirmation dialog.
   Mark Served   — Gets selected order ID, calls orderService.markAsServed().
   Cancel Order  — Confirms with dialog, calls orderService.cancelOrder().
-  Refresh Now   — Manually triggers refreshOrderStatus().
+  Refresh       — Manually triggers refreshOrderStatus().
 
 Auto-refresh:
   java.util.Timer (daemon) schedules refreshOrderStatus() every 3 000 ms.
   refreshOrderStatus() always runs inside SwingUtilities.invokeLater() to
   update the table safely on the Event Dispatch Thread.
+
+── OrderHistoryPanel.java ────────────────────────────────────────────────────
+
+Displays a historical view of all orders, loaded from the CSV file.
+Includes searching, filtering, and a summary of total revenue and order counts.
+
+Layout  : BorderLayout
+  NORTH  — Toolbar with Search field, Status filter dropdown, and Refresh button.
+  CENTER — JTable showing historical orders (Order ID, Table, Customer, Status, Total, Time).
+           Double-clicking a row shows a detailed popup with the ordered items.
+  SOUTH  — Summary bar displaying Total Orders and Total Revenue.
+
+Key Features:
+  - Live Search: KeyListener on the search field updates the table dynamically.
+  - Dropdown Filter: ActionListener on status dropdown filters by OrderStatus.
+  - Stream API: Uses Java Streams and Lambdas to filter the order list.
 
 ── BillingPanel.java ─────────────────────────────────────────────────────────
 
@@ -1024,16 +1047,17 @@ TOPIC 17 — LINE COUNT BREAKDOWN
 
 File                     Lines   Package
 ──────────────────────── ─────── ──────────────
-OrderPanel.java            234   ui
-BillingPanel.java          229   ui
-MenuPanel.java             206   ui
-MenuRepository.java        120   repository
-MainFrame.java             104   ui
-BillingService.java         76   service
-Bill.java                   66   model
-OrderService.java           64   service
-Order.java                  58   model
-OrderRepository.java        54   repository
+OrderPanel.java            276   ui
+BillingPanel.java          166   ui
+OrderHistoryPanel.java     146   ui
+MenuPanel.java             140   ui
+MainFrame.java              79   ui
+MenuRepository.java         74   repository
+OrderRepository.java        91   repository
+BillingService.java         48   service
+Bill.java                   47   model
+OrderService.java           43   service
+Order.java                  41   model
 NotificationThread.java     52   concurrent
 KitchenWorkerThread.java    43   concurrent
 KitchenService.java         41   service
@@ -1056,13 +1080,13 @@ Main.java                    7   (root)
 Payable.java                 6   interfaces
 Notifiable.java              5   interfaces
 ──────────────────────── ─────── ──────────────
-TOTAL                    1,656   (31 files)
+TOTAL                    1,537   (32 files)
 
 Layer summary:
-  UI layer            (4 files)  :  773 lines
-  Model layer         (7 files)  :  247 lines
-  Service layer       (3 files)  :  181 lines
-  Repository layer    (2 files)  :  174 lines
+  UI layer            (5 files)  :  807 lines
+  Model layer         (7 files)  :  211 lines
+  Service layer       (3 files)  :  132 lines
+  Repository layer    (2 files)  :  165 lines
   Concurrency layer   (3 files)  :  125 lines
   Enums               (3 files)  :   57 lines
   Exceptions          (3 files)  :   51 lines
