@@ -5,17 +5,18 @@ public abstract class MenuItem {
     private String name;
     private String category;
     private double basePrice;
-    private boolean available;
 
-    public MenuItem(String itemId, String name, String category, double basePrice, boolean available) {
+    public MenuItem(String itemId, String name, String category, double basePrice) {
         this.itemId = itemId;
         this.name = name;
         this.category = category;
         this.basePrice = basePrice;
-        this.available = available;
     }
 
-    public abstract double getTaxedPrice();
+    public static final double TAX_RATE = 0.10;
+    public double getTaxedPrice() {
+        return getBasePrice() * (1 + TAX_RATE);
+    }
     public abstract String getItemType();
 
     public String getItemId() { return itemId; }
@@ -30,8 +31,7 @@ public abstract class MenuItem {
     public double getBasePrice() { return basePrice; }
     public void setBasePrice(double basePrice) { this.basePrice = basePrice; }
 
-    public boolean isAvailable() { return available; }
-    public void setAvailable(boolean available) { this.available = available; }
+
 
     @Override
     public String toString() {
